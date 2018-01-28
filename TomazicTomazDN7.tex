@@ -1,0 +1,163 @@
+% To je predloga za poročila o domačih nalogah pri predmetih, katerih
+% nosilec je Blaž Zupan. Seveda lahko tudi dodaš kakšen nov, zanimiv
+% in uporaben element, ki ga v tej predlogi (še) ni. Več o LaTeX-u izveš na
+% spletu, na primer na http://tobi.oetiker.ch/lshort/lshort.pdf.
+%
+% To predlogo lahko spremeniš v PDF dokument s pomočjo programa
+% pdflatex, ki je del standardne instalacije LaTeX programov.
+
+\documentclass[a4paper,11pt]{article}
+\usepackage{a4wide}
+\usepackage{fullpage}
+\usepackage[utf8x]{inputenc}
+\usepackage[slovene]{babel}
+\selectlanguage{slovene}
+\usepackage[toc,page]{appendix}
+\usepackage[pdftex]{graphicx} % za slike
+\usepackage{setspace}
+\usepackage{color}
+\definecolor{light-gray}{gray}{0.95}
+\definecolor{mygreen}{rgb}{0,0.6,0}
+\definecolor{mygray}{rgb}{0.5,0.5,0.5}
+\definecolor{mymauve}{rgb}{0.58,0,0.82}
+
+
+\usepackage{listings}
+\lstset{ %
+  backgroundcolor=\color{white},   % choose the background color; you must add \usepackage{color} or \usepackage{xcolor}
+  basicstyle=\footnotesize,        % the size of the fonts that are used for the code
+  breakatwhitespace=false,         % sets if automatic breaks should only happen at whitespace
+  breaklines=true,                 % sets automatic line breaking
+  captionpos=b,                    % sets the caption-position to bottom
+  commentstyle=\color{mygreen},    % comment style
+  deletekeywords={...},            % if you want to delete keywords from the given language
+  escapeinside={\%*}{*)},          % if you want to add LaTeX within your code
+  extendedchars=true,              % lets you use non-ASCII characters; for 8-bits encodings only, does not work with UTF-8
+  frame=single,                    % adds a frame around the code
+  keepspaces=true,                 % keeps spaces in text, useful for keeping indentation of code (possibly needs columns=flexible)
+  keywordstyle=\color{blue},       % keyword style
+  language=Octave,                 % the language of the code
+  otherkeywords={*,...},            % if you want to add more keywords to the set
+  numbers=left,                    % where to put the line-numbers; possible values are (none, left, right)
+  numbersep=5pt,                   % how far the line-numbers are from the code
+  numberstyle=\tiny\color{mygray}, % the style that is used for the line-numbers
+  rulecolor=\color{black},         % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  showspaces=false,                % show spaces everywhere adding particular underscores; it overrides 'showstringspaces'
+  showstringspaces=false,          % underline spaces within strings only
+  showtabs=false,                  % show tabs within strings adding particular underscores
+  stepnumber=2,                    % the step between two line-numbers. If it's 1, each line will be numbered
+  stringstyle=\color{mymauve},     % string literal style
+  tabsize=2,                       % sets default tabsize to 2 spaces
+  title=\lstname                   % show the filename of files included with \lstinputlisting; also try caption instead of title
+}
+
+\definecolor{light-gray}{gray}{0.95}
+
+
+\usepackage{listings} % za vključevanje kode
+\usepackage{hyperref}
+\renewcommand{\baselinestretch}{1.2} % za boljšo berljivost večji razmak
+\renewcommand{\appendixpagename}{Priloge}
+
+\lstset{ % nastavitve za izpis kode, sem lahko tudi kaj dodaš/spremeniš
+language=Python,
+basicstyle=\footnotesize,
+basicstyle=\ttfamily\footnotesize\setstretch{1},
+backgroundcolor=\color{light-gray},
+}
+
+\title{Klasifikacija besedil z jedrnimi metodami}
+\author{Tomaž Tomažič (63100281)}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\section{Uvod}
+
+V nalogi sem uporabili SVM za klasifikacijo besedil da bi pri tem spoznal pomen jeder.
+
+\section{Podatki}
+
+Podatke smo si morali sami poiskati v treh kategorijah. Shranil sem bloge. Izbral sem si dve podobni kategoriji Windows blog (A) in Bing blog (B). Za drugacno temo pa sem izbral Zoella blog (C), ki je popularen blog za zenske, licenje in podobne reci.
+
+\section{Metode}
+
+Potrebno je bilo napisati jedro za podporne vektorje implementirane v sklearn knjižnjici. Jedro deluje na principu merjenja razdalje s kompresijo, kot je bilo podano v navodilih naloge. Razdalje sem obrnil tako da sem odstel vse vrednosti od najvecje v matriki razdalj. Napovedi sem naredil za vse tri kombinacije med kategorijami: A in B, A in C, B in C. Napoved sem naredil tako, da sem se naucil model na 80\% podatkih, ostalih 20\% pa sem uporabil za napoved verjetnosti razreda.
+
+\section{Rezultati}
+Rezultate sem preveril kar z metodo ostrega očesa, ko sem izpisal napovedane vrjetnosti.
+Rezultati so bili nekoliko boljsi ko sem napovedoval cisto razlicne razrede (A-C in B-C) v primerjavi z podobnimi razredi (A-B). Menim da bi bilo to mozno se precej izboljsati z iskanjem pravih parametrov.
+
+\section{Izjava o izdelavi domače naloge}
+Domačo nalogo in pripadajoče programe sem izdelal sam.
+
+\appendix
+\appendixpage
+
+\section{\label{app-code}Programska koda}
+
+\begin{lstlisting}
+import zlib
+import copy
+import numpy as np
+from sklearn.svm import SVC
+from sklearn.metrics import roc_auc_score, accuracy_score, auc
+
+class SVM:
+    def __init__(self, data):
+        self.learner = SVC(C = 1.1, kernel=self.string_kernel, probability=True)
+        self.data = data
+
+    def Z(self, a):
+        return len(zlib.compress(a.encode()))
+
+    def distance(self, a, b):
+        Z = self.Z
+        a = self.data[int(a)]
+        b = self.data[int(b)]
+
+        ab = a+b
+        ba = b+a
+        return (Z(ab) - Z(a)) / Z(a) + (Z(ba) - Z(b)) / Z(b)
+
+    def string_kernel(self, X, Y):
+        M = np.zeros((len(X), len(Y)))
+        for i, a in enumerate(X):
+            for j, b in enumerate(Y):
+                M[i, j] = self.distance(a[0], b[0])
+        return M.max() - M
+
+    def fit(self, X, Y):
+        return self.learner.fit(X, Y)
+
+    def predict(self, X):
+        return self.learner.predict_proba(X)
+
+data_a = [ open("source/windows/"+str(i)+".txt", "rt").read() for i in range(1, 21)]
+data_b = [ open("source/bing/"+str(i)+".txt", "rt").read() for i in range(1, 21)]
+data_c = [ open("source/zoella/"+str(i)+".txt", "rt").read() for i in range(1, 21)]
+
+def test(data_a, data_b):
+    da = data_a[:-4]
+    db = data_b[:-4]
+    data_ab = copy.deepcopy(da)
+    data_ab.extend(db)
+
+    Xab = np.vstack(np.r_[0:len(data_ab)])
+    Yab = np.array([0]*len(da) + [1]*len(db))
+
+    s = SVM(data_ab)
+    s.fit(Xab, Yab)
+    s.data.extend(data_a[-4:])
+    s.data.extend(data_b[-4:])
+
+    return s.predict(np.vstack(np.r_[len(da)*2:len(data_a)*2]))
+
+print(test(data_a, data_b))
+print(test(data_a, data_c))
+print(test(data_b, data_c))
+\end{lstlisting}
+
+\end{document}
